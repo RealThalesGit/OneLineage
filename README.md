@@ -24,6 +24,9 @@ Hot-switch between stock **One UI** and a **LineageOS 23.2 (Android 16) GSI** on
 | `assets/zygote_exec` | Static aarch64 launcher for the guest zygote |
 | `build_apk.sh` | Builds and signs the APK |
 
+## Appearance and language
+The app includes Lineage Blue, Ocean, Violet, and AMOLED Black palettes. The selected palette is saved on the device. English is the default language, and Brazilian Portuguese is available when selected as the app or device language.
+
 ## Patches
 
 ### Patched system files (bind-mounted over the GSI)
@@ -55,7 +58,7 @@ Hot-switch between stock **One UI** and a **LineageOS 23.2 (Android 16) GSI** on
 - Never kill the host `netd` while Lineage is running.
 
 ## Building
-Edit the paths at the top of `build_apk.sh` (JDK 17, Android SDK build-tools 34, android-34 platform), provide your own signing keystore, then run `./build_apk.sh`.
+Set `ANDROID_SDK_ROOT` (or `ANDROID_HOME`) to your Android SDK directory, install JDK 17, Android SDK build-tools 34.0.0 and the android-34 platform, then run `./build_apk.sh`. The script writes the APK to `out/OneLineage.apk` and creates a development keystore on first use. You can override `BUILD_TOOLS_VERSION`, `ANDROID_PLATFORM`, and `OUT_APK`; set `KEYSTORE`, `KEYSTORE_PASS`, `KEY_ALIAS`, and `KEY_PASS` to sign with your own keystore.
 
 ## Credits
 LineageOS GSI builds by MisterZtr (SourceForge). LineageOS and Android are trademarks of their respective owners. Not affiliated with Samsung, Google or LineageOS.
