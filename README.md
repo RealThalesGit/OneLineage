@@ -25,7 +25,7 @@ Hot-switch between stock **One UI** and a **LineageOS 23.2 (Android 16) GSI** on
 | `build_apk.sh` | Builds and signs the APK |
 
 ## Appearance and language
-The app includes Lineage Blue, Ocean, Violet, and AMOLED Black palettes. The selected palette is saved on the device. English is the default language, and Brazilian Portuguese is available when selected as the app or device language.
+The hamburger menu opens an in-app Material You style preferences panel for English/Brazilian Portuguese and the Lineage Blue, Ocean, Violet, and AMOLED Black palettes. The selected language and palette are saved on the device.
 
 ## Patches
 

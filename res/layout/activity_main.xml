@@ -15,11 +15,18 @@
         android:paddingTop="36dp"
         android:paddingBottom="48dp">
 
-        <!-- Top App Bar / Header -->
+        <!-- Top app bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -38,6 +45,19 @@
                 android:text="@string/header_subtitle_oneui"
                 android:textColor="@color/m3_text_secondary"
                 android:textSize="13sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_menu"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/btn_m3_tonal"
+                android:contentDescription="@string/open_settings"
+                android:text="☰"
+                android:textAllCaps="false"
+                android:textColor="@color/m3_text_primary"
+                android:textSize="22sp" />
         </LinearLayout>
 
         <!-- System Status Card -->
@@ -84,37 +104,6 @@
                 android:text="@string/status_image_checking"
                 android:textColor="@color/m3_text_secondary"
                 android:textSize="13sp" />
-        </LinearLayout>
-
-        <!-- Appearance -->
-        <LinearLayout
-            android:id="@+id/card_appearance"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:background="@drawable/card_surface_container"
-            android:orientation="vertical"
-            android:padding="20dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/appearance_title"
-                android:textColor="@color/m3_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-medium" />
-
-            <Button
-                android:id="@+id/btn_theme"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/btn_m3_tonal"
-                android:text="@string/theme_option_lineage"
-                android:textAllCaps="false"
-                android:textColor="@color/m3_text_primary"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-medium" />
         </LinearLayout>
 
         <!-- Switcher Actions Hero Card -->

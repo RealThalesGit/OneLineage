@@ -22,6 +22,13 @@
     <string name="status_image_error">Image Check Error: %1$s</string>
 
     <string name="appearance_title">Appearance</string>
+    <string name="open_settings">Open language and theme settings</string>
+    <string name="settings_title">Preferences</string>
+    <string name="settings_subtitle">Personalize OneLineage</string>
+    <string name="language_title">App language</string>
+    <string name="language_english">English</string>
+    <string name="language_portuguese_brazil">Português (Brasil)</string>
+    <string name="theme_title">Color theme</string>
     <string name="theme_option_lineage">Lineage Blue</string>
     <string name="theme_option_ocean">Ocean</string>
     <string name="theme_option_violet">Violet</string>

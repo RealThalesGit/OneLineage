@@ -2,14 +2,22 @@ package com.wewaffles.onelineage;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.LocaleManager;
 import android.content.res.ColorStateList;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.LocaleList;
 import android.os.Looper;
+import android.view.Gravity;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -25,6 +33,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -57,7 +66,7 @@ public class MainActivity extends Activity {
     private Button btnReturnOneUI;
     private Button btnBackupLauncher;
     private Button btnRestoreLauncher;
-    private Button btnTheme;
+    private Button btnMenu;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -71,6 +80,23 @@ public class MainActivity extends Activity {
     private boolean isRootGranted = false;
     private String suBinary = "su";
     private Flavor selectedFlavor = Flavor.VANILLA;
+
+    @Override
+    protected void attachBaseContext(android.content.Context newBase) {
+        super.attachBaseContext(applySavedLocale(newBase));
+    }
+
+    private static android.content.Context applySavedLocale(android.content.Context context) {
+        if (Build.VERSION.SDK_INT >= 33) return context;
+        String languageTag = context.getSharedPreferences("onelineage", MODE_PRIVATE)
+                .getString("app_language", "");
+        if (languageTag.isEmpty()) return context;
+        Locale locale = Locale.forLanguageTag(languageTag);
+        Locale.setDefault(locale);
+        Configuration configuration = new Configuration(context.getResources().getConfiguration());
+        configuration.setLocale(locale);
+        return context.createConfigurationContext(configuration);
+    }
 
     private static final String STAGE_DIR = "/data/local/tmp/lineage_stage";
     private static final String SYSTEM_RAW = STAGE_DIR + "/system.raw";
@@ -111,14 +137,13 @@ public class MainActivity extends Activity {
         btnReturnOneUI = findViewById(R.id.btn_return_oneui);
         btnBackupLauncher = findViewById(R.id.btn_backup_launcher);
         btnRestoreLauncher = findViewById(R.id.btn_restore_launcher);
-        btnTheme = findViewById(R.id.btn_theme);
+        btnMenu = findViewById(R.id.btn_menu);
         downloadButtonIdleText = getString(R.string.btn_download_lineage);
 
         setupFlavorSelection();
         selectedTheme = getSharedPreferences("onelineage", MODE_PRIVATE).getInt("color_theme", 0);
         if (selectedTheme < 0 || selectedTheme > 3) selectedTheme = 0;
         applyTheme();
-        updateThemeButton();
         extractAssets();
         checkRootAndSystem();
 
@@ -128,7 +153,7 @@ public class MainActivity extends Activity {
         btnReturnOneUI.setOnClickListener(v -> returnToOneUI());
         btnBackupLauncher.setOnClickListener(v -> backupLauncher());
         btnRestoreLauncher.setOnClickListener(v -> restoreLauncher());
-        btnTheme.setOnClickListener(v -> showThemePicker());
+        btnMenu.setOnClickListener(v -> showPreferencesDrawer());
     }
 
     @Override
@@ -166,25 +191,168 @@ public class MainActivity extends Activity {
         if (currentPalette != null) applyFlavorCardTheme();
     }
 
-    private void showThemePicker() {
+    private void showPreferencesDrawer() {
+        Palette palette = currentPalette;
+        Dialog dialog = new Dialog(this);
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(24), dp(32), dp(20), dp(20));
+        panel.setBackground(roundDrawerBackground(palette));
+
+        TextView title = drawerText(getString(R.string.settings_title), 24, palette.textPrimary, true);
+        panel.addView(title, drawerParams(-1, -2));
+        TextView subtitle = drawerText(getString(R.string.settings_subtitle), 14, palette.textSecondary, false);
+        LinearLayout.LayoutParams subtitleParams = drawerParams(-1, -2);
+        subtitleParams.topMargin = dp(4);
+        panel.addView(subtitle, subtitleParams);
+
+        ScrollView content = new ScrollView(this);
+        content.setFillViewport(false);
+        LinearLayout choices = new LinearLayout(this);
+        choices.setOrientation(LinearLayout.VERTICAL);
+        TextView languageLabel = drawerSectionTitle(getString(R.string.language_title), palette);
+        choices.addView(languageLabel, drawerParams(-1, -2));
+        int selectedLanguage = currentLanguageIndex();
+        addDrawerChoice(choices, getString(R.string.language_english), selectedLanguage == 0,
+                null, palette, () -> changeLanguage("en", dialog));
+        addDrawerChoice(choices, getString(R.string.language_portuguese_brazil), selectedLanguage == 1,
+                null, palette, () -> changeLanguage("pt-BR", dialog));
+
+        TextView themeLabel = drawerSectionTitle(getString(R.string.theme_title), palette);
+        LinearLayout.LayoutParams themeLabelParams = drawerParams(-1, -2);
+        themeLabelParams.topMargin = dp(22);
+        choices.addView(themeLabel, themeLabelParams);
         String[] themeNames = getResources().getStringArray(R.array.theme_names);
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.theme_dialog_title)
-                .setSingleChoiceItems(themeNames, selectedTheme, (dialog, which) -> {
-                    selectedTheme = which;
-                    getSharedPreferences("onelineage", MODE_PRIVATE).edit()
-                            .putInt("color_theme", selectedTheme).apply();
-                    applyTheme();
-                    updateThemeButton();
-                    dialog.dismiss();
-                })
-                .setNegativeButton(R.string.dialog_cancel, null)
-                .show();
+        for (int i = 0; i < themeNames.length; i++) {
+            final int themeIndex = i;
+            addDrawerChoice(choices, themeNames[i], selectedTheme == i,
+                    Palette.forTheme(i).accent, palette, () -> {
+                        selectedTheme = themeIndex;
+                        getSharedPreferences("onelineage", MODE_PRIVATE).edit()
+                                .putInt("color_theme", selectedTheme).apply();
+                        applyTheme();
+                        dialog.dismiss();
+                        showPreferencesDrawer();
+                    });
+        }
+        content.addView(choices);
+        LinearLayout.LayoutParams contentParams = drawerParams(-1, 0);
+        contentParams.weight = 1;
+        contentParams.topMargin = dp(16);
+        panel.addView(content, contentParams);
+
+        TextView close = drawerText(getString(R.string.dialog_cancel), 14, palette.accent, true);
+        close.setGravity(Gravity.CENTER);
+        close.setBackground(rippleDrawable(palette.raisedSurface, palette.accentRipple, 24));
+        close.setOnClickListener(v -> dialog.dismiss());
+        LinearLayout.LayoutParams closeParams = drawerParams(-1, dp(48));
+        closeParams.topMargin = dp(12);
+        panel.addView(close, closeParams);
+
+        dialog.setContentView(panel);
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawableResource(android.R.color.transparent);
+            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            WindowManager.LayoutParams attributes = window.getAttributes();
+            attributes.gravity = Gravity.START | Gravity.TOP;
+            attributes.width = Math.min(dp(360), getResources().getDisplayMetrics().widthPixels - dp(40));
+            attributes.height = WindowManager.LayoutParams.MATCH_PARENT;
+            attributes.dimAmount = 0.38f;
+            window.setAttributes(attributes);
+        }
+        dialog.show();
+        if (window != null) {
+            window.setLayout(Math.min(dp(360), getResources().getDisplayMetrics().widthPixels - dp(40)),
+                    WindowManager.LayoutParams.MATCH_PARENT);
+        }
     }
 
-    private void updateThemeButton() {
-        String[] themeNames = getResources().getStringArray(R.array.theme_names);
-        btnTheme.setText(themeNames[selectedTheme]);
+    private void addDrawerChoice(LinearLayout parent, String label, boolean selected, Integer swatch,
+                                 Palette palette, Runnable action) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(dp(14), 0, dp(14), 0);
+        row.setBackground(rippleDrawable(selected ? palette.primarySurface : palette.raisedSurface,
+                palette.accentRipple, 18));
+        row.setClickable(true);
+        row.setFocusable(true);
+        if (swatch != null) {
+            View colorDot = new View(this);
+            GradientDrawable dot = new GradientDrawable();
+            dot.setShape(GradientDrawable.OVAL);
+            dot.setColor(swatch);
+            colorDot.setBackground(dot);
+            LinearLayout.LayoutParams dotParams = drawerParams(dp(16), dp(16));
+            dotParams.setMarginEnd(dp(12));
+            row.addView(colorDot, dotParams);
+        }
+        TextView text = drawerText(label, 15, palette.textPrimary, selected);
+        row.addView(text, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView check = drawerText(selected ? "✓" : "", 18, palette.accent, true);
+        check.setGravity(Gravity.CENTER);
+        row.addView(check, drawerParams(dp(28), dp(28)));
+        row.setOnClickListener(v -> action.run());
+        LinearLayout.LayoutParams params = drawerParams(-1, dp(52));
+        params.topMargin = dp(6);
+        parent.addView(row, params);
+    }
+
+    private void changeLanguage(String languageTag, Dialog dialog) {
+        getSharedPreferences("onelineage", MODE_PRIVATE).edit()
+                .putString("app_language", languageTag).apply();
+        dialog.dismiss();
+        if (Build.VERSION.SDK_INT >= 33) {
+            LocaleManager localeManager = getSystemService(LocaleManager.class);
+            if (localeManager != null) {
+                localeManager.setApplicationLocales(LocaleList.forLanguageTags(languageTag));
+            }
+        } else {
+            recreate();
+        }
+    }
+
+    private int currentLanguageIndex() {
+        Locale current = getResources().getConfiguration().getLocales().get(0);
+        return "pt".equalsIgnoreCase(current.getLanguage()) ? 1 : 0;
+    }
+
+    private TextView drawerSectionTitle(String text, Palette palette) {
+        TextView view = drawerText(text, 13, palette.accent, true);
+        view.setPadding(dp(4), 0, 0, 0);
+        return view;
+    }
+
+    private TextView drawerText(String text, int sizeSp, int color, boolean medium) {
+        TextView view = new TextView(this);
+        view.setText(text);
+        view.setTextSize(sizeSp);
+        view.setTextColor(color);
+        view.setTypeface(android.graphics.Typeface.create(
+                medium ? "sans-serif-medium" : "sans-serif",
+                android.graphics.Typeface.NORMAL));
+        return view;
+    }
+
+    private LinearLayout.LayoutParams drawerParams(int width, int height) {
+        return new LinearLayout.LayoutParams(width, height);
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private GradientDrawable roundDrawerBackground(Palette palette) {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(palette.surface);
+        background.setCornerRadii(new float[]{0, 0, dp(28), dp(28), dp(28), dp(28), 0, 0});
+        return background;
+    }
+
+    private RippleDrawable rippleDrawable(int fill, int ripple, int radiusDp) {
+        return new RippleDrawable(ColorStateList.valueOf(ripple),
+                roundDrawable(fill, Color.TRANSPARENT, radiusDp), null);
     }
 
     private void applyTheme() {
@@ -196,7 +364,7 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(palette.background);
 
         int[] cardIds = {
-                R.id.card_system_status, R.id.card_appearance, R.id.card_switch_actions,
+                R.id.card_system_status, R.id.card_switch_actions,
                 R.id.card_image_management, R.id.card_launcher_safety, R.id.card_operation_log
         };
         for (int id : cardIds) {
@@ -210,7 +378,7 @@ public class MainActivity extends Activity {
         setThemedButton(btnDeleteLineage, palette.errorSurface, palette.error, palette.error);
         setThemedButton(btnBackupLauncher, palette.raisedSurface, palette.textPrimary, palette.accentRipple);
         setThemedButton(btnRestoreLauncher, palette.raisedSurface, palette.textPrimary, palette.accentRipple);
-        setThemedButton(btnTheme, palette.raisedSurface, palette.textPrimary, palette.accentRipple);
+        setThemedButton(btnMenu, palette.raisedSurface, palette.textPrimary, palette.accentRipple);
 
         logScrollView.setBackground(roundDrawable(palette.logBackground, palette.outline, 16));
         pbDownload.setProgressTintList(ColorStateList.valueOf(palette.accent));
